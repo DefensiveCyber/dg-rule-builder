@@ -2,7 +2,8 @@
 
 A standalone, browser-based XML rule generator for **Fortra Digital Guardian 9.0**. No server, no install, no dependencies — open the HTML file and start building rules.
 
-![Rule Builder Screenshot](screenshot.png)
+<img width="3431" height="1271" alt="image" src="https://github.com/user-attachments/assets/ddeffdc3-e5c3-49f2-a627-75495caf4f82" />
+
 
 ---
 
