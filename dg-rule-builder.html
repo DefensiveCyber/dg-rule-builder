@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DG Rule Builder</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg:      #0f1117;
+  --surface: #161b27;
+  --surf2:   #1e2535;
+  --border:  #2a3347;
+  --border2: #374460;
+  --accent:  #4f8ef7;
+  --green:   #3ecf8e;
+  --red:     #e05252;
+  --orange:  #f5a623;
+  --purple:  #a78bfa;
+  --cyan:    #22d3ee;
+  --text:    #e2e8f0;
+  --muted:   #64748b;
+  --code:    #0a0d14;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 13px; min-height: 100vh; display: flex; flex-direction: column; }
+
+/* ── Header ── */
+header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 11px 20px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.logo { width: 30px; height: 30px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #fff; flex-shrink: 0; }
+header h1 { font-size: 14px; font-weight: 700; }
+header h1 span { font-weight: 400; color: var(--muted); font-size: 11px; }
+.hlinks { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.hlinks a { font-size: 12px; font-weight: 600; color: var(--accent); text-decoration: none; display: flex; align-items: center; gap: 4px; transition: opacity .15s; }
+.hlinks a:hover { opacity: .75; }
+
+/* ── Layout: 3 columns with draggable dividers ── */
+.workspace { display: flex; flex: 1; height: calc(100vh - 50px); overflow: hidden; }
+
+/* ── Resize handles ── */
+.divider {
+  width: 5px; flex-shrink: 0;
+  background: var(--border);
+  cursor: col-resize;
+  transition: background 0.15s;
+  position: relative; z-index: 10;
+  display: flex; align-items: center; justify-content: center;
+}
+.divider::after {
+  content: '';
+  width: 1px; height: 32px;
+  background: var(--border2);
+  border-radius: 1px;
+  transition: background 0.15s;
+}
+.divider:hover, .divider.dragging { background: rgba(79,142,247,0.2); }
+.divider:hover::after, .divider.dragging::after { background: var(--accent); }
+
+/* ── Column shared ── */
+.col { background: var(--surface); overflow: hidden; display: flex; flex-direction: column; border-right: 1px solid var(--border); }
+.col.scrollable { overflow-y: auto; }
+.col-title { font-size: 10px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--muted); padding: 12px 14px 8px; border-bottom: 1px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; }
+
+/* ── Presets Column ── */
+.preset-group { border-bottom: 1px solid var(--border); }
+.preset-group-label { font-size: 9px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--muted); padding: 8px 14px 4px; }
+.preset-btn {
+  display: block; width: 100%; text-align: left; background: none; border: none;
+  padding: 7px 14px; cursor: pointer; transition: background .12s;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.preset-btn:hover { background: var(--surf2); }
+.preset-btn:last-child { border-bottom: none; }
+.pb-name { font-size: 11px; font-weight: 600; color: var(--text); display: block; }
+.pb-desc { font-size: 9.5px; color: var(--muted); display: block; margin-top: 1px; line-height: 1.4; }
+.pb-tags { display: flex; gap: 3px; margin-top: 4px; flex-wrap: wrap; }
+.pb-tag { font-size: 8.5px; font-weight: 600; padding: 1px 5px; border-radius: 3px; }
+.tag-blue   { background: rgba(79,142,247,.15); color: var(--accent); }
+.tag-green  { background: rgba(62,207,142,.15);  color: var(--green);  }
+.tag-orange { background: rgba(245,166,35,.15);  color: var(--orange); }
+.tag-red    { background: rgba(224,82,82,.15);   color: var(--red);    }
+.tag-purple { background: rgba(167,139,250,.15); color: var(--purple); }
+
+/* ── Builder Column ── */
+.sec { border-bottom: 1px solid var(--border); padding: 12px 14px; }
+.sec:last-child { border-bottom: none; flex: 1; }
+.sec-title { font-size: 10px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--muted); margin-bottom: 9px; display: flex; align-items: center; justify-content: space-between; }
+.qlink { font-size: 10px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--accent); text-decoration: none; cursor: pointer; }
+.qlink:hover { opacity: .75; }
+
+.f { margin-bottom: 7px; }
+.f label { display: block; font-size: 10px; font-weight: 600; color: var(--muted); margin-bottom: 3px; }
+.f input, .f select { width: 100%; background: var(--surf2); border: 1px solid var(--border); border-radius: 5px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 12px; padding: 5px 7px; outline: none; transition: border-color .15s; appearance: none; }
+.f input:focus, .f select:focus { border-color: var(--accent); }
+.f select option { background: var(--surf2); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+.atiles { display: grid; grid-template-columns: repeat(3,1fr); gap: 3px; }
+.atile { background: var(--surf2); border: 1px solid var(--border); border-radius: 5px; padding: 6px 3px; text-align: center; cursor: pointer; transition: all .12s; font-size: 10px; font-weight: 600; color: var(--muted); line-height: 1.3; }
+.atile:hover { border-color: var(--border2); color: var(--text); }
+.atile .ico { font-size: 13px; display: block; margin-bottom: 2px; }
+.atile .sub { font-size: 8px; font-weight: 400; color: var(--muted); display: block; margin-top: 1px; }
+.atile.on-Continue { border-color: var(--green);  background: rgba(62,207,142,.1);  color: var(--green);  }
+.atile.on-Block    { border-color: var(--red);    background: rgba(224,82,82,.1);   color: var(--red);    }
+.atile.on-Prompt   { border-color: var(--orange); background: rgba(245,166,35,.1);  color: var(--orange); }
+.atile.on-Encrypt  { border-color: var(--accent); background: rgba(79,142,247,.1);  color: var(--accent); }
+.atile.on-Vault    { border-color: var(--purple); background: rgba(167,139,250,.1); color: var(--purple); }
+.atile.on-Label    { border-color: var(--cyan);   background: rgba(34,211,238,.1);  color: var(--cyan);   }
+
+.lrow { display: flex; gap: 3px; margin-bottom: 8px; }
+.lbtn { flex: 1; background: var(--surf2); border: 1px solid var(--border); border-radius: 5px; color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; padding: 5px; cursor: pointer; transition: all .12s; }
+.lbtn.on-and { background: rgba(79,142,247,.12); border-color: var(--accent); color: var(--accent); }
+.lbtn.on-or  { background: rgba(167,139,250,.12);border-color: var(--purple);color: var(--purple); }
+.lbtn.on-not { background: rgba(224,82,82,.12);  border-color: var(--red);   color: var(--red);   }
+
+.clist { display: flex; flex-direction: column; gap: 4px; }
+.ccard { background: var(--surf2); border: 1px solid var(--border); border-radius: 5px; padding: 7px 9px; transition: border-color .12s; }
+.ccard:hover { border-color: var(--border2); }
+.ccard.t-op    { border-left: 3px solid var(--accent); }
+.ccard.t-drive { border-left: 3px solid var(--green);  }
+.ccard.t-proc  { border-left: 3px solid var(--orange); }
+.ccard.t-file  { border-left: 3px solid var(--purple); }
+.ccard.t-time  { border-left: 3px solid #ec4899;       }
+.ccard.t-agent { border-left: 3px solid var(--cyan);   }
+.chdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.cbadge { font-size: 9px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; padding: 1px 5px; border-radius: 3px; background: rgba(255,255,255,.05); color: var(--muted); }
+.brm { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 14px; line-height: 1; padding: 0; transition: color .12s; }
+.brm:hover { color: var(--red); }
+.lsep { text-align: center; font-size: 9px; font-weight: 700; letter-spacing: .8px; color: var(--muted); text-transform: uppercase; padding: 1px 0; }
+.addbar { display: flex; gap: 3px; margin-top: 7px; flex-wrap: wrap; }
+.addbtn { flex: 1; min-width: 58px; background: var(--surf2); border: 1px dashed var(--border2); border-radius: 4px; color: var(--muted); font-family: 'Inter',sans-serif; font-size: 9.5px; font-weight: 600; padding: 5px 3px; cursor: pointer; transition: all .12s; text-align: center; }
+.addbtn:hover { border-color: var(--accent); color: var(--accent); background: rgba(79,142,247,.07); }
+.fwwarn { background: rgba(245,166,35,.08); border: 1px solid rgba(245,166,35,.3); border-radius: 4px; padding: 5px 8px; font-size: 10px; color: var(--orange); line-height: 1.5; margin-top: 5px; display: none; }
+.fwwarn.on { display: block; }
+
+/* tag input */
+.tagwrap { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 3px 4px; display: flex; flex-wrap: wrap; gap: 3px; min-height: 28px; cursor: text; transition: border-color .15s; }
+.tagwrap:focus-within { border-color: var(--accent); }
+.tag { background: rgba(79,142,247,.15); border: 1px solid rgba(79,142,247,.3); color: var(--accent); font-size: 10px; font-weight: 600; padding: 1px 5px; border-radius: 3px; display: flex; align-items: center; gap: 3px; }
+.tagx { cursor: pointer; opacity: .5; font-size: 11px; }
+.tagx:hover { opacity: 1; }
+.taginp { background: none; border: none; outline: none; color: var(--text); font-family: 'JetBrains Mono',monospace; font-size: 11px; flex: 1; min-width: 55px; padding: 1px 2px; }
+
+.ops-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; max-height: 160px; overflow-y: auto; }
+.opcb { display: flex; align-items: flex-start; gap: 5px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 4px 5px; cursor: pointer; transition: all .1s; }
+.opcb:hover { border-color: var(--border2); }
+.opcb input { accent-color: var(--accent); cursor: pointer; margin-top: 1px; flex-shrink: 0; }
+.opcb.on { border-color: rgba(79,142,247,.5); background: rgba(79,142,247,.07); }
+.opname { font-family: 'JetBrains Mono',monospace; font-size: 8.5px; color: var(--text); line-height: 1.3; }
+.opdesc { font-size: 8px; color: var(--muted); }
+.hint { font-size: 9px; color: var(--muted); margin-top: 2px; }
+.empty { text-align: center; padding: 16px 10px; color: var(--muted); font-size: 11px; line-height: 1.8; }
+
+/* card inner fields */
+.ccard select, .ccard input[type=text], .ccard input[type=time] { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-family: 'Inter',sans-serif; font-size: 11px; padding: 4px 6px; outline: none; appearance: none; transition: border-color .15s; }
+.ccard select:focus, .ccard input:focus { border-color: var(--accent); }
+.ccard select option { background: var(--surf2); }
+.cfl { margin-bottom: 4px; }
+.cfl label { display: block; font-size: 9px; font-weight: 600; color: var(--muted); margin-bottom: 2px; }
+
+/* ── Output Column ── */
+.right { display: flex; flex-direction: column; overflow: hidden; border-right: none; }
+.outbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 8px 14px; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.outbar h2 { font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: .8px; text-transform: uppercase; flex: 1; }
+.btn { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 5px; border: none; font-family: 'Inter',sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; transition: all .12s; }
+.btn-ghost { background: var(--surf2); color: var(--muted); border: 1px solid var(--border); }
+.btn-ghost:hover { border-color: var(--border2); color: var(--text); }
+.btn-red { background: transparent; color: var(--red); border: 1px solid var(--border); }
+.btn-red:hover { border-color: var(--red); background: rgba(224,82,82,.08); }
+.btn-accent { background: var(--accent); color: #fff; }
+.btn-accent:hover { opacity: .85; }
+
+.xmlscroll { flex: 1; overflow: auto; background: var(--code); }
+pre#xmlout { font-family: 'JetBrains Mono',monospace; font-size: 12px; line-height: 1.8; color: #cdd6f4; padding: 18px 22px; white-space: pre; min-height: 100%; }
+.xt{color:#89b4fa}.xa{color:#f38ba8}.xv{color:#a6e3a1}.xc{color:#585b70;font-style:italic}.xk{color:#fab387}.xp{color:#cba6f7}.xf{color:#f9e2af}
+
+/* toast */
+#toast { position: fixed; bottom: 16px; right: 16px; background: var(--green); color: #0a1a12; padding: 7px 13px; border-radius: 5px; font-weight: 700; font-size: 11px; opacity: 0; transform: translateY(4px); transition: all .18s; pointer-events: none; z-index: 1000; }
+#toast.on { opacity: 1; transform: none; }
+
+/* ── Modal ── */
+.mbg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 200; align-items: center; justify-content: center; }
+.mbg.on { display: flex; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; width: 680px; max-width: 95vw; max-height: 88vh; display: flex; flex-direction: column; box-shadow: 0 24px 64px rgba(0,0,0,.5); }
+.mhdr { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.mhdr h2 { font-size: 15px; font-weight: 700; }
+.mclose { background: none; border: none; cursor: pointer; font-size: 20px; color: var(--muted); line-height: 1; }
+.mclose:hover { color: var(--text); }
+.mtabs { display: flex; gap: 2px; padding: 9px 18px 0; border-bottom: 1px solid var(--border); flex-shrink: 0; overflow-x: auto; }
+.mtab { padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; transition: all .12s; background: none; border-top: none; border-left: none; border-right: none; border-radius: 0; font-family: 'Inter',sans-serif; white-space: nowrap; }
+.mtab:hover { color: var(--text); }
+.mtab.on { color: var(--accent); border-bottom-color: var(--accent); }
+.mbody { padding: 16px 18px; overflow-y: auto; flex: 1; }
+.mfoot { padding: 10px 18px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.mfoot a { font-size: 11px; font-weight: 600; color: var(--accent); text-decoration: none; display: flex; align-items: center; gap: 4px; }
+.mfoot a:hover { opacity: .75; }
+
+/* help content */
+.hsec { margin-bottom: 16px; }
+.hsec h3 { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 7px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+.htbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+.htbl th { background: var(--surf2); padding: 5px 10px; text-align: left; font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: .5px; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+.htbl td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; color: var(--text); }
+.htbl td:first-child { font-family: 'JetBrains Mono',monospace; font-size: 11px; color: var(--accent); font-weight: 600; white-space: nowrap; }
+.htbl tr:last-child td { border-bottom: none; }
+.htbl td small { font-size: 10px; color: var(--muted); display: block; margin-top: 2px; }
+.callout { background: rgba(79,142,247,.08); border: 1px solid rgba(79,142,247,.25); border-radius: 6px; padding: 10px 12px; font-size: 11px; line-height: 1.6; color: #93c5fd; margin-bottom: 12px; }
+.callout b { color: #bfdbfe; }
+.note { background: rgba(245,166,35,.08); border: 1px solid rgba(245,166,35,.25); border-radius: 6px; padding: 10px 12px; font-size: 11px; line-height: 1.6; color: #fde68a; margin-bottom: 12px; }
+.note b { color: #fef08a; }
+.pill { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+.p-green  { background: rgba(62,207,142,.12);  color: var(--green);  border: 1px solid rgba(62,207,142,.3);  }
+.p-red    { background: rgba(224,82,82,.12);   color: var(--red);    border: 1px solid rgba(224,82,82,.3);   }
+.p-orange { background: rgba(245,166,35,.12);  color: var(--orange); border: 1px solid rgba(245,166,35,.3);  }
+.p-blue   { background: rgba(79,142,247,.12);  color: var(--accent); border: 1px solid rgba(79,142,247,.3);  }
+.p-purple { background: rgba(167,139,250,.12); color: var(--purple); border: 1px solid rgba(167,139,250,.3); }
+.p-cyan   { background: rgba(34,211,238,.12);  color: var(--cyan);   border: 1px solid rgba(34,211,238,.3);  }
+
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">DG</div>
+  <h1>Rule Builder <span>· Digital Guardian 9.0</span></h1>
+  <div class="hlinks">
+    <a href="#" onclick="openHelp();return false;">📖 Quick Reference</a>
+    <a href="#" onclick="openPDF();return false;">📄 Rule Implementation Guide</a>
+  </div>
+</header>
+
+<div class="workspace" id="workspace">
+
+  <!-- ══ COL 1: PRESETS ══ -->
+  <div class="col scrollable" id="col-presets" style="width:260px;min-width:120px;max-width:480px;flex-shrink:0;">
+    <div class="col-title">Preset Rules <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px;">click to load</span></div>
+
+    <div class="preset-group">
+      <div class="preset-group-label">CD / DVD — Capture</div>
+      <button class="preset-btn" onclick="loadPreset('cd_capture_all')">
+        <span class="pb-name">Capture All CD/DVD Burns</span>
+        <span class="pb-desc">Logs all native CD/DVD burn operations — internal and external drives</span>
+        <div class="pb-tags"><span class="pb-tag tag-blue">constOpCDBurn</span><span class="pb-tag tag-green">Continue</span></div>
+      </button>
+      <button class="preset-btn" onclick="loadPreset('cd_capture_full')">
+        <span class="pb-name">Capture Full CD/DVD Activity</span>
+        <span class="pb-desc">Burns, file copies, moves, writes, save-as, and network downloads to CD/DVD</span>
+        <div class="pb-tags"><span class="pb-tag tag-blue">6 ops</span><span class="pb-tag tag-green">Continue</span></div>
+      </button>
+      <button class="preset-btn" onclick="loadPreset('cd_capture_reads')">
+        <span class="pb-name">Capture CD/DVD Reads</span>
+        <span class="pb-desc">Logs files being read from CD or DVD media</span>
+        <div class="pb-tags"><span class="pb-tag tag-blue">FileRead</span><span class="pb-tag tag-green">Continue</span></div>
+      </button>
+    </div>
+
+    <div class="preset-group">
+      <div class="preset-group-label">CD / DVD — Block</div>
+      <button class="preset-btn" onclick="loadPreset('cd_block_all')">
+        <span class="pb-name">Block All CD/DVD Burns</span>
+        <span class="pb-desc">Hard blocks all native burn operations to any CD/DVD drive</span>
+        <div class="pb-tags"><span class="pb-tag tag-blue">constOpCDBurn</span><span class="pb-tag tag-red">Block</span></div>
+      </button>
+      <button class="preset-btn" onclick="loadPreset('cd_block_except_authorized')">
+        <span class="pb-name">Block Burns — Except Authorized Apps</span>
+        <span class="pb-desc">Blocks CD burns from any process not in your authorized list</span>
+        <div class="pb-tags"><span class="pb-tag tag-blue">constOpCDBurn</span><span class="pb-tag tag-red">Block</span><span class="pb-tag tag-orange">Process</span></div>
+      </button>
+      <button class="preset-btn" onclick="loadPreset('cd_block_laptops')">
+        <span class="pb-name">Block Burns on Laptops</span>
+        <span class="pb-desc">Prevents laptop machines specifically from writing to CD/DVD drives</span>
+        <div class="pb-tags"><span class="pb-tag tag-blue">constOpCDBurn</span><span class="pb-tag tag-red">Block</span><span class="pb-tag tag-purple">agentIsLaptop</span></div>
+      </button>
+      <button class="preset-btn" onclick="loadPreset('cd_block_after_hours')">
+        <span class="pb-name">Block Burns After Hours</span>
+        <span class="pb-desc">Blocks CD/DVD burns before 8 AM and after 6 PM</span>
+        <div class="pb-tags"><span class="pb-tag tag-blue">constOpCDBurn</span><span class="pb-tag tag-red">Block</span><span class="pb-tag tag-orange">Time</span></div>
+      </button>
+      <button class="preset-btn" onclick="loadPreset('cd_block_classified')">
+        <span class="pb-name">Block Burns of Classified Files</span>
+        <span class="pb-desc">Blocks burning any file tagged as classified to CD/DVD</span>
+        <div class="pb-tags"><span class="pb-tag tag-blue">constOpCDBurn</span><span class="pb-tag tag-red">Block</span><span class="pb-tag tag-purple">Classification</span></div>
+      </button>
+    </div>
+
+    <div class="preset-group">
+      <div class="preset-group-label">CD / DVD — Prompt</div>
+      <button class="preset-btn" onclick="loadPreset('cd_prompt_all')">
+        <span class="pb-name">Prompt on All CD/DVD Burns</span>
+        <span class="pb-desc">Warns users and requests justification before allowing a burn</span>
+        <div class="pb-tags"><span class="pb-tag tag-blue">constOpCDBurn</span><span class="pb-tag tag-orange">Prompt</span></div>
+      </button>
+      <button class="preset-btn" onclick="loadPreset('cd_prompt_ext_types')">
+        <span class="pb-name">Prompt on Sensitive File Types</span>
+        <span class="pb-desc">Prompts when Office docs, PDFs, or archives are burned to CD/DVD</span>
+        <div class="pb-tags"><span class="pb-tag tag-blue">constOpCDBurn</span><span class="pb-tag tag-orange">Prompt</span><span class="pb-tag tag-purple">FileExt</span></div>
+      </button>
+    </div>
+
+    <div class="preset-group">
+      <div class="preset-group-label">USB / Removable — Capture</div>
+      <button class="preset-btn" onclick="loadPreset('usb_capture_full')">
+        <span class="pb-name">Capture Full USB Activity</span>
+        <span class="pb-desc">Logs all outbound file activity to USB — copies, moves, save-as, writes, archives</span>
+        <div class="pb-tags"><span class="pb-tag tag-blue">6 ops</span><span class="pb-tag tag-green">Continue</span></div>
+      </button>
+      <button class="preset-btn" onclick="loadPreset('usb_capture_copy_move')">
+        <span class="pb-name">Capture Copies &amp; Moves to USB</span>
+        <span class="pb-desc">Logs file copies, moves, and save-as operations to removable drives</span>
+        <div class="pb-tags"><span class="pb-tag tag-blue">Copy/Move/SaveAs</span><span class="pb-tag tag-green">Continue</span></div>
+      </button>
+      <button class="preset-btn" onclick="loadPreset('usb_capture_device_insert')">
+        <span class="pb-name">Capture USB Device Insertions</span>
+        <span class="pb-desc">Logs every time any USB storage device is plugged into the machine</span>
+        <div class="pb-tags"><span class="pb-tag tag-blue">DeviceAdded</span><span class="pb-tag tag-green">Continue</span></div>
+      </button>
+      <button class="preset-btn" onclick="loadPreset('usb_capture_sensitive_ext')">
+        <span class="pb-name">Capture Sensitive File Types to USB</span>
+        <span class="pb-desc">Logs copies of Office docs, PDFs, and archives to USB drives</span>
+        <div class="pb-tags"><span class="pb-tag tag-blue">FileExt</span><span class="pb-tag tag-green">Continue</span></div>
+      </button>
+    </div>
+
+    <div class="preset-group">
+      <div class="preset-group-label">USB / Removable — Block</div>
+      <button class="preset-btn" onclick="loadPreset('usb_block_full')">
+        <span class="pb-name">Block Full USB Activity</span>
+        <span class="pb-desc">Blocks all outbound file activity to USB — copies, moves, save-as, writes, archives</span>
+        <div class="pb-tags"><span class="pb-tag tag-red">Block</span><span class="pb-tag tag-blue">6 ops</span></div>
+      </button>
+      <button class="preset-btn" onclick="loadPreset('usb_block_copy_move')">
+        <span class="pb-name">Block Copies &amp; Moves to USB</span>
+        <span class="pb-desc">Blocks file copies, moves, and save-as to removable drives</span>
+        <div class="pb-tags"><span class="pb-tag tag-red">Block</span><span class="pb-tag tag-blue">Copy/Move/SaveAs</span></div>
+      </button>
+      <button class="preset-btn" onclick="loadPreset('usb_block_except_approved')">
+        <span class="pb-name">Block USB — Except Approved Drives</span>
+        <span class="pb-desc">Blocks all removable drive activity unless vendor ID and product ID match an approved device</span>
+        <div class="pb-tags"><span class="pb-tag tag-red">Block</span><span class="pb-tag tag-orange">VendorID</span></div>
+      </button>
+      <button class="preset-btn" onclick="loadPreset('usb_block_classified')">
+        <span class="pb-name">Block Classified Files to USB</span>
+        <span class="pb-desc">Blocks copying any DG-classified file to a removable drive</span>
+        <div class="pb-tags"><span class="pb-tag tag-red">Block</span><span class="pb-tag tag-purple">Classification</span></div>
+      </button>
+    </div>
+
+    <div class="preset-group">
+      <div class="preset-group-label">USB / Removable — Prompt</div>
+      <button class="preset-btn" onclick="loadPreset('usb_prompt_full')">
+        <span class="pb-name">Prompt on All USB Writes</span>
+        <span class="pb-desc">Warns user and requests justification before any file is saved to USB</span>
+        <div class="pb-tags"><span class="pb-tag tag-orange">Prompt</span><span class="pb-tag tag-blue">6 ops</span></div>
+      </button>
+    </div>
+
+    <div class="preset-group" style="border-bottom:none;">
+      <div class="preset-group-label">Network / Browser</div>
+      <button class="preset-btn" onclick="loadPreset('net_capture_downloads')">
+        <span class="pb-name">Capture Browser Downloads</span>
+        <span class="pb-desc">Logs all HTTP/HTTPS file downloads through supported browsers</span>
+        <div class="pb-tags"><span class="pb-tag tag-blue">NetTransferDownload</span><span class="pb-tag tag-green">Continue</span></div>
+      </button>
+      <button class="preset-btn" onclick="loadPreset('net_capture_uploads')">
+        <span class="pb-name">Capture Browser Uploads</span>
+        <span class="pb-desc">Logs all HTTP/HTTPS file uploads through supported browsers</span>
+        <div class="pb-tags"><span class="pb-tag tag-blue">NetTransferUpload</span><span class="pb-tag tag-green">Continue</span></div>
+      </button>
+    </div>
+  </div><!-- /col-presets -->
+
+  <div class="divider" id="div-1"></div>
+
+  <!-- ══ COL 2: BUILDER ══ -->
+  <div class="col scrollable" id="col-builder" style="width:300px;min-width:220px;max-width:600px;flex-shrink:0;">
+
+    <div class="sec">
+      <div class="sec-title">Rule Info</div>
+      <div class="grid2">
+        <div class="f"><label>Rule Name</label><input type="text" id="r-name" placeholder="My-Rule" oninput="gen()"/></div>
+        <div class="f"><label>Rule Type</label>
+          <select id="r-type" onchange="gen()">
+            <option value="Control">Control</option>
+            <option value="Classification">Classification</option>
+            <option value="Filter">Filter</option>
+            <option value="TrustedProcess">Trusted Process</option>
+          </select>
+        </div>
+        <div class="f"><label>Send Alert</label>
+          <select id="r-alert" onchange="gen()">
+            <option value="AlertAndEvent">Alert &amp; Event</option>
+            <option value="EventsOnly">Events Only</option>
+            <option value="None">None</option>
+          </select>
+        </div>
+        <div class="f"><label>Severity</label>
+          <select id="r-sev" onchange="gen()">
+            <option value="High">High</option>
+            <option value="Medium" selected>Medium</option>
+            <option value="Low">Low</option>
+            <option value="Info">Informational</option>
+          </select>
+        </div>
+        <div class="f"><label>Status</label>
+          <select id="r-status" onchange="gen()">
+            <option value="Inactive">Inactive</option>
+            <option value="Active">Active</option>
+          </select>
+        </div>
+        <div class="f"><label>Continue Eval</label>
+          <select id="r-cont" onchange="gen()">
+            <option value="No">No</option>
+            <option value="Yes">Yes</option>
+          </select>
+        </div>
+      </div>
+      <div class="f"><label>Run After Operation</label>
+        <select id="r-post" onchange="gen()">
+          <option value="No">No (default)</option>
+          <option value="Yes">Yes</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">
+        Primary Action
+        <a class="qlink" onclick="openHelp('actions')">What's this?</a>
+      </div>
+      <div class="atiles">
+        <div class="atile on-Continue" data-a="Continue" onclick="setPrimary('Continue')"><span class="ico">📋</span>Continue<span class="sub">Log &amp; allow</span></div>
+        <div class="atile" data-a="Block"   onclick="setPrimary('Block')"  ><span class="ico">🚫</span>Block<span class="sub">Hard stop</span></div>
+        <div class="atile" data-a="Prompt"  onclick="setPrimary('Prompt')" ><span class="ico">💬</span>Prompt<span class="sub">Warn user</span></div>
+        <div class="atile" data-a="Encrypt" onclick="setPrimary('Encrypt')"><span class="ico">🔒</span>Encrypt<span class="sub">Encrypt file</span></div>
+        <div class="atile" data-a="Vault"   onclick="setPrimary('Vault')"  ><span class="ico">🗄</span>Vault<span class="sub">Data vault</span></div>
+        <div class="atile" data-a="Label"   onclick="setPrimary('Label')"  ><span class="ico">🏷</span>Label<span class="sub">Apply MIP</span></div>
+      </div>
+    </div>
+
+    <div class="sec" style="flex:1;">
+      <div class="sec-title">
+        Conditions
+        <a class="qlink" onclick="openHelp('conditions')">What's this?</a>
+      </div>
+      <div style="font-size:9.5px;color:var(--muted);margin-bottom:5px;">Root logic</div>
+      <div class="lrow">
+        <button class="lbtn on-and" id="lb-and" onclick="setLogic('and')">AND</button>
+        <button class="lbtn"        id="lb-or"  onclick="setLogic('or')">OR</button>
+        <button class="lbtn"        id="lb-not" onclick="setLogic('not')">NOT</button>
+      </div>
+      <div id="clist" class="clist">
+        <div class="empty">Add conditions below, or load a preset from the left.</div>
+      </div>
+      <div class="addbar">
+        <button class="addbtn" onclick="addC('op')">+ Operation</button>
+        <button class="addbtn" onclick="addC('drive')">+ Drive Type</button>
+        <button class="addbtn" onclick="addC('proc')">+ Process</button>
+        <button class="addbtn" onclick="addC('file')">+ File Prop</button>
+        <button class="addbtn" onclick="addC('time')">+ Time</button>
+        <button class="addbtn" onclick="addC('agent')">+ Agent</button>
+      </div>
+      <div id="fww" class="fwwarn">
+        ⚠ <b>FileWrite detected</b> — auto-split into separate branch using <code>evtSrcDriveType</code>.
+      </div>
+    </div>
+  </div><!-- /col-builder -->
+
+  <div class="divider" id="div-2"></div>
+
+  <!-- ══ COL 3: OUTPUT ══ -->
+  <div class="right col" id="col-output" style="flex:1;min-width:160px;border-right:none;overflow:hidden;">
+    <div class="outbar">
+      <h2>Generated XML</h2>
+      <button class="btn btn-ghost" onclick="copyXML()">📋 Copy</button>
+      <button class="btn btn-ghost" onclick="dlXML()">⬇ Download</button>
+      <button class="btn btn-red"   onclick="resetAll()">Reset</button>
+    </div>
+    <div class="xmlscroll"><pre id="xmlout"></pre></div>
+  </div>
+
+</div>
+
+<!-- ══ MODAL ══ -->
+<div class="mbg" id="mbg" onclick="if(event.target===this)closeHelp()">
+  <div class="modal">
+    <div class="mhdr">
+      <h2>Quick Reference</h2>
+      <button class="mclose" onclick="closeHelp()">×</button>
+    </div>
+    <div class="mtabs">
+      <button class="mtab on" id="tab-overview"   onclick="switchTab('overview')">Overview</button>
+      <button class="mtab"    id="tab-actions"    onclick="switchTab('actions')">Actions</button>
+      <button class="mtab"    id="tab-conditions" onclick="switchTab('conditions')">Conditions</button>
+      <button class="mtab"    id="tab-ops"        onclick="switchTab('ops')">Operations</button>
+      <button class="mtab"    id="tab-operators"  onclick="switchTab('operators')">Operators</button>
+    </div>
+    <div class="mbody" id="mbody"></div>
+    <div class="mfoot">
+      <a href="#" onclick="openPDF();return false;">📄 Open Full Rule Implementation Guide (PDF)</a>
+      <button class="btn btn-accent" onclick="closeHelp()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast">Copied!</div>
+
+<script>
+// ═══════════ DATA ═══════════
+
+const OPS = [
+  {v:'constOpCDBurn',             d:'CD/DVD burn / write'},
+  {v:'constOpFileCopy',           d:'File copy'},
+  {v:'constOpFileMove',           d:'File move'},
+  {v:'constOpFileSaveAs',         d:'Save As (new name or location)'},
+  {v:'constOpFileWrite',          d:'Write to file stream (no dest path)'},
+  {v:'constOpFileRead',           d:'Read file contents'},
+  {v:'constOpFileOpen',           d:'Open file handle or stream'},
+  {v:'constOpFileCreate',         d:'Create new file'},
+  {v:'constOpFileDelete',         d:'Delete file (no recycle bin)'},
+  {v:'constOpFileRecycle',        d:'Send to recycle bin'},
+  {v:'constOpFileRename',         d:'Rename file or folder'},
+  {v:'constOpFileEdit',           d:'Edit and save in place'},
+  {v:'constOpFileArchive',        d:'Archive (WinZip / WinRAR / mkisofs)'},
+  {v:'constOpFileExtract',        d:'Extract from archive'},
+  {v:'constOpFileClose',          d:'File close'},
+  {v:'constOpNetTransferDownload',d:'Browser HTTP/S download'},
+  {v:'constOpNetTransferUpload',  d:'Browser HTTP/S upload'},
+  {v:'constOpNetwork',            d:'All network operations'},
+  {v:'constOpPrint',              d:'Print file'},
+  {v:'constOpAdePaste',           d:'Paste (ADE)'},
+  {v:'constOpAdeCut',             d:'Cut (ADE)'},
+  {v:'constOpAdePrintScreen',     d:'Print Screen key (ADE)'},
+  {v:'constOpAdeScreenCapture',   d:'Screen capture (ADE)'},
+  {v:'constOpDeviceAdded',        d:'USB device inserted'},
+  {v:'constOpDeviceRemoved',      d:'USB device removed'},
+  {v:'constOpAppStart',           d:'Application start'},
+];
+
+const DRIVES = [
+  {v:'constDriveCDRom',    d:'CD-ROM or DVD drive (internal & external)'},
+  {v:'constDriveRemovable',d:'Removable drive (USB flash, etc.)'},
+  {v:'constDriveFixed',    d:'Fixed / internal hard drive'},
+  {v:'constDriveRemote',   d:'Network / remote drive'},
+  {v:'constDriveUnknown',  d:'Unknown drive type'},
+];
+
+const BUSES = [
+  {v:'constBusUSB',    d:'USB — external devices'},
+  {v:'constBusATAPI',  d:'ATAPI — internal optical drives'},
+  {v:'constBusSata',   d:'SATA — internal drives'},
+  {v:'constBusATA',    d:'ATA bus'},
+  {v:'constBus1394',   d:'Firewire (1394)'},
+  {v:'constBusScsi',   d:'SCSI'},
+  {v:'constBusUnknown',d:'Unknown bus type'},
+];
+
+const FILE_P = [
+  {v:'evtSrcFileExt',               b:false,d:'Source file extension'},
+  {v:'evtDestFileExt',              b:false,d:'Destination file extension'},
+  {v:'evtSrcFilePath',              b:false,d:'Source file path'},
+  {v:'evtDestFilePath',             b:false,d:'Destination file path'},
+  {v:'evtSrcFileSize',              b:false,d:'Source file size (bytes)'},
+  {v:'evtSrcFileIsEncrypted',       b:true, d:'Source file is encrypted'},
+  {v:'evtSrcFileIsClassified',      b:true, d:'Source file is classified'},
+  {v:'evtDestFileIsClassified',     b:true, d:'Destination file is classified'},
+  {v:'evtSrcFilePolicyTag',         b:false,d:'DG policy tag on source file'},
+  {v:'evtDestFilePolicyTag',        b:false,d:'DG policy tag on dest file'},
+  {v:'evtDestIsWindowsCdBurnFolder',b:true, d:'Dest is Windows CD burn staging folder'},
+  {v:'evtSrcIsWindowsCdBurnFolder', b:true, d:'Source is Windows CD burn staging folder'},
+  {v:'evtDestVendorId',             b:false,d:'Destination USB device vendor ID (4-char hex, e.g. 0930)'},
+  {v:'evtDestProductId',            b:false,d:'Destination USB device product ID (4-char hex, e.g. 653d)'},
+  {v:'evtDestVendor',               b:false,d:'Destination USB device vendor name (e.g. SanDisk)'},
+  {v:'evtDestProduct',              b:false,d:'Destination USB device product name (e.g. Cruzer)'},
+  {v:'evtDestSerialNumber',         b:false,d:'Destination USB device serial number'},
+];
+
+const PROCS = [
+  {v:'curProcessImageName',d:'Process name (e.g. nero.exe)'},
+  {v:'curProcessFilePath', d:'Full path of process executable'},
+  {v:'curProcessMD5',      d:'MD5 hash of process'},
+  {v:'curProcessIsBrowser',d:'Process is a browser (bool)'},
+];
+
+const AGENTS = [
+  {v:'agentIsLaptop',        b:true, d:'Machine is a laptop'},
+  {v:'agentIsRegistered',    b:true, d:'Agent is registered'},
+  {v:'agentIsTerminal',      b:true, d:'Terminal server session'},
+  {v:'agentIsVirtualSession',b:true, d:'Virtual / VDI session'},
+  {v:'agentCurrentTime',     b:false,d:'Current time of day'},
+  {v:'agentCurrentDateTime', b:false,d:'Current date and time'},
+];
+
+const SOPS = ['equal','notEqual','like','notLike','regExp','in','notIn'];
+
+// ═══════════ STATE ═══════════
+
+let cs=[], logic='and', primary='Continue', cc=0;
+
+// ═══════════ PRESETS ═══════════
+
+const PRESETS = {
+
+  cd_capture_all: {
+    name:'Capture-CD-DVD-Burns', action:'Continue', alert:'AlertAndEvent', sev:'Medium',
+    logic:'and',
+    conditions:[
+      {type:'op',    data:{ops:['constOpCDBurn']}},
+      {type:'drive', data:{prop:'evtDestDriveType',dc:'constDriveCDRom',bus:false,bc:'constBusUSB'}},
+    ]
+  },
+
+  cd_capture_full: {
+    name:'Capture-CD-DVD-Full-Activity', action:'Continue', alert:'AlertAndEvent', sev:'Medium',
+    logic:'and',
+    // FileWrite present — will auto-split into or branches
+    conditions:[
+      {type:'op',    data:{ops:['constOpCDBurn','constOpFileCopy','constOpFileMove','constOpFileSaveAs','constOpFileWrite','constOpNetTransferDownload','constOpFileArchive']}},
+      {type:'drive', data:{prop:'evtDestDriveType',dc:'constDriveCDRom',bus:false,bc:'constBusUSB'}},
+    ]
+  },
+
+  cd_capture_reads: {
+    name:'Capture-CD-DVD-File-Reads', action:'Continue', alert:'AlertAndEvent', sev:'Low',
+    logic:'and',
+    conditions:[
+      {type:'op',    data:{ops:['constOpFileRead']}},
+      {type:'drive', data:{prop:'evtSrcDriveType',dc:'constDriveCDRom',bus:false,bc:'constBusUSB'}},
+    ]
+  },
+
+  cd_block_all: {
+    name:'Block-CD-DVD-Burns', action:'Block', alert:'AlertAndEvent', sev:'High',
+    logic:'and',
+    conditions:[
+      {type:'op',    data:{ops:['constOpCDBurn']}},
+      {type:'drive', data:{prop:'evtDestDriveType',dc:'constDriveCDRom',bus:false,bc:'constBusUSB'}},
+    ]
+  },
+
+  cd_block_except_authorized: {
+    name:'Block-CD-Burns-Unauthorized-Apps', action:'Block', alert:'AlertAndEvent', sev:'High',
+    logic:'and',
+    conditions:[
+      // Process condition uses notIn — fires for anything NOT in the whitelist
+      {type:'proc',  data:{prop:'curProcessImageName',op:'notIn',vals:['nero.exe','imgburn.exe']}},
+      {type:'op',    data:{ops:['constOpCDBurn']}},
+      {type:'drive', data:{prop:'evtDestDriveType',dc:'constDriveCDRom',bus:false,bc:'constBusUSB'}},
+    ]
+  },
+
+  cd_block_laptops: {
+    name:'Block-CD-Burns-Laptops', action:'Block', alert:'AlertAndEvent', sev:'High',
+    logic:'and',
+    conditions:[
+      {type:'agent', data:{prop:'agentIsLaptop',bv:'true'}},
+      {type:'op',    data:{ops:['constOpCDBurn']}},
+      {type:'drive', data:{prop:'evtDestDriveType',dc:'constDriveCDRom',bus:false,bc:'constBusUSB'}},
+    ]
+  },
+
+  cd_block_after_hours: {
+    name:'Block-CD-Burns-After-Hours', action:'Block', alert:'AlertAndEvent', sev:'High',
+    logic:'or',
+    conditions:[
+      {type:'time',  data:{op:'lessThan',tv:'08:00'}},
+      {type:'time',  data:{op:'greaterThan',tv:'18:00'}},
+      {type:'op',    data:{ops:['constOpCDBurn']}},
+      {type:'drive', data:{prop:'evtDestDriveType',dc:'constDriveCDRom',bus:false,bc:'constBusUSB'}},
+    ]
+  },
+
+  cd_block_classified: {
+    name:'Block-CD-Burns-Classified-Files', action:'Block', alert:'AlertAndEvent', sev:'High',
+    logic:'and',
+    conditions:[
+      {type:'file',  data:{prop:'evtSrcFileIsClassified',op:'equal',vals:[],bv:'true'}},
+      {type:'op',    data:{ops:['constOpCDBurn']}},
+      {type:'drive', data:{prop:'evtDestDriveType',dc:'constDriveCDRom',bus:false,bc:'constBusUSB'}},
+    ]
+  },
+
+  cd_prompt_all: {
+    name:'Prompt-CD-DVD-Burns', action:'Prompt', alert:'AlertAndEvent', sev:'Medium',
+    logic:'and',
+    conditions:[
+      {type:'op',    data:{ops:['constOpCDBurn']}},
+      {type:'drive', data:{prop:'evtDestDriveType',dc:'constDriveCDRom',bus:false,bc:'constBusUSB'}},
+    ]
+  },
+
+  cd_prompt_ext_types: {
+    name:'Prompt-CD-Burns-Sensitive-Extensions', action:'Prompt', alert:'AlertAndEvent', sev:'Medium',
+    logic:'and',
+    conditions:[
+      {type:'file',  data:{prop:'evtSrcFileExt',op:'in',vals:['doc','docx','xls','xlsx','ppt','pptx','pdf','zip','rar','7z'],bv:'true'}},
+      {type:'op',    data:{ops:['constOpCDBurn']}},
+      {type:'drive', data:{prop:'evtDestDriveType',dc:'constDriveCDRom',bus:false,bc:'constBusUSB'}},
+    ]
+  },
+
+  // ── USB / Removable — Capture ──
+
+  // Full activity: FileCopy, FileMove, FileSaveAs, FileWrite (auto-split), FileArchive, FileCreate
+  // FileWrite has no dest path — builder auto-splits into <or> branches using evtSrcDriveType
+  usb_capture_full: {
+    name:'Capture-USB-Full-Activity', action:'Continue', alert:'AlertAndEvent', sev:'Medium',
+    logic:'and',
+    conditions:[
+      {type:'op',    data:{ops:['constOpFileCopy','constOpFileMove','constOpFileSaveAs','constOpFileWrite','constOpFileArchive','constOpFileCreate']}},
+      {type:'drive', data:{prop:'evtDestDriveType',dc:'constDriveRemovable',bus:false,bc:'constBusUSB'}},
+    ]
+  },
+
+  usb_capture_copy_move: {
+    name:'Capture-USB-Copies-Moves', action:'Continue', alert:'AlertAndEvent', sev:'Medium',
+    logic:'and',
+    conditions:[
+      {type:'op',    data:{ops:['constOpFileCopy','constOpFileMove','constOpFileSaveAs']}},
+      {type:'drive', data:{prop:'evtDestDriveType',dc:'constDriveRemovable',bus:false,bc:'constBusUSB'}},
+    ]
+  },
+
+  // DeviceAdded cannot be used in Block rules — Continue/alert only
+  usb_capture_device_insert: {
+    name:'Capture-USB-Device-Insertions', action:'Continue', alert:'AlertAndEvent', sev:'Medium',
+    logic:'and',
+    conditions:[
+      {type:'op', data:{ops:['constOpDeviceAdded']}},
+    ]
+  },
+
+  usb_capture_sensitive_ext: {
+    name:'Capture-USB-Sensitive-File-Types', action:'Continue', alert:'AlertAndEvent', sev:'High',
+    logic:'and',
+    conditions:[
+      {type:'file',  data:{prop:'evtSrcFileExt',op:'in',vals:['doc','docx','xls','xlsx','ppt','pptx','pdf','zip','rar','7z','csv'],bv:'true'}},
+      {type:'op',    data:{ops:['constOpFileCopy','constOpFileMove','constOpFileSaveAs','constOpFileWrite']}},
+      {type:'drive', data:{prop:'evtDestDriveType',dc:'constDriveRemovable',bus:false,bc:'constBusUSB'}},
+    ]
+  },
+
+  // ── USB / Removable — Block ──
+
+  usb_block_full: {
+    name:'Block-USB-Full-Activity', action:'Block', alert:'AlertAndEvent', sev:'High',
+    logic:'and',
+    conditions:[
+      {type:'op',    data:{ops:['constOpFileCopy','constOpFileMove','constOpFileSaveAs','constOpFileWrite','constOpFileArchive','constOpFileCreate']}},
+      {type:'drive', data:{prop:'evtDestDriveType',dc:'constDriveRemovable',bus:false,bc:'constBusUSB'}},
+    ]
+  },
+
+  usb_block_copy_move: {
+    name:'Block-USB-Copies-Moves', action:'Block', alert:'AlertAndEvent', sev:'High',
+    logic:'and',
+    conditions:[
+      {type:'op',    data:{ops:['constOpFileCopy','constOpFileMove','constOpFileSaveAs']}},
+      {type:'drive', data:{prop:'evtDestDriveType',dc:'constDriveRemovable',bus:false,bc:'constBusUSB'}},
+    ]
+  },
+
+  // Whitelist pattern: block all EXCEPT approved vendor+product ID combination
+  // Edit the File Property conditions after loading to set your approved vendor/product IDs
+  usb_block_except_approved: {
+    name:'Block-USB-Except-Approved-Drives', action:'Block', alert:'AlertAndEvent', sev:'High',
+    logic:'and',
+    conditions:[
+      {type:'file',  data:{prop:'evtDestVendorId',op:'notEqual',vals:['0930'],bv:'true'}},
+      {type:'op',    data:{ops:['constOpFileCopy','constOpFileMove','constOpFileSaveAs','constOpFileWrite']}},
+      {type:'drive', data:{prop:'evtDestDriveType',dc:'constDriveRemovable',bus:false,bc:'constBusUSB'}},
+    ]
+  },
+
+  usb_block_classified: {
+    name:'Block-USB-Classified-Files', action:'Block', alert:'AlertAndEvent', sev:'High',
+    logic:'and',
+    conditions:[
+      {type:'file',  data:{prop:'evtSrcFileIsClassified',op:'equal',vals:[],bv:'true'}},
+      {type:'op',    data:{ops:['constOpFileCopy','constOpFileMove','constOpFileSaveAs','constOpFileWrite']}},
+      {type:'drive', data:{prop:'evtDestDriveType',dc:'constDriveRemovable',bus:false,bc:'constBusUSB'}},
+    ]
+  },
+
+  // ── USB / Removable — Prompt ──
+
+  usb_prompt_full: {
+    name:'Prompt-USB-All-Writes', action:'Prompt', alert:'AlertAndEvent', sev:'Medium',
+    logic:'and',
+    conditions:[
+      {type:'op',    data:{ops:['constOpFileCopy','constOpFileMove','constOpFileSaveAs','constOpFileWrite','constOpFileArchive','constOpFileCreate']}},
+      {type:'drive', data:{prop:'evtDestDriveType',dc:'constDriveRemovable',bus:false,bc:'constBusUSB'}},
+    ]
+  },
+
+  net_capture_downloads: {
+    name:'Capture-Browser-Downloads', action:'Continue', alert:'AlertAndEvent', sev:'Low',
+    logic:'and',
+    conditions:[
+      {type:'op', data:{ops:['constOpNetTransferDownload']}},
+    ]
+  },
+
+  net_capture_uploads: {
+    name:'Capture-Browser-Uploads', action:'Continue', alert:'AlertAndEvent', sev:'Medium',
+    logic:'and',
+    conditions:[
+      {type:'op', data:{ops:['constOpNetTransferUpload']}},
+    ]
+  },
+};
+
+function loadPreset(key){
+  const p=PRESETS[key]; if(!p) return;
+  cs=[]; cc=0;
+  document.getElementById('r-name').value=p.name;
+  document.getElementById('r-alert').value=p.alert||'AlertAndEvent';
+  document.getElementById('r-sev').value=p.sev||'Medium';
+  document.getElementById('r-status').value='Inactive';
+  document.getElementById('r-cont').value='No';
+  document.getElementById('r-post').value='No';
+  setPrimary(p.action||'Continue');
+  setLogic(p.logic||'and');
+  // Deep-clone conditions
+  p.conditions.forEach(c=>{
+    cs.push({id:++cc, type:c.type, data:JSON.parse(JSON.stringify(c.data))});
+  });
+  renderCs(); gen();
+}
+
+// ═══════════ ACTIONS ═══════════
+
+function setPrimary(a){
+  primary=a;
+  document.querySelectorAll('.atile').forEach(el=>{el.className='atile'+(el.dataset.a===a?' on-'+a:'');});
+  gen();
+}
+
+// ═══════════ LOGIC ═══════════
+
+function setLogic(op){
+  logic=op;
+  ['and','or','not'].forEach(o=>{document.getElementById('lb-'+o).className='lbtn'+(o===op?' on-'+o:'');});
+  renderCs(); gen();
+}
+
+// ═══════════ CONDITIONS ═══════════
+
+function addC(type){cs.push({id:++cc,type,data:dd(type)});renderCs();gen();}
+function removeC(id){cs=cs.filter(c=>c.id!==id);renderCs();gen();}
+
+function dd(t){
+  switch(t){
+    case 'op':    return{ops:[]};
+    case 'drive': return{prop:'evtDestDriveType',dc:'constDriveCDRom',bus:false,bc:'constBusUSB'};
+    case 'proc':  return{prop:'curProcessImageName',op:'in',vals:[]};
+    case 'file':  return{prop:'evtSrcFileExt',op:'in',vals:[],bv:'true'};
+    case 'time':  return{op:'greaterThan',tv:'17:00'};
+    case 'agent': return{prop:'agentIsLaptop',bv:'true'};
+    default:      return{};
+  }
+}
+
+function gc(id){return cs.find(c=>c.id===id);}
+function up(id,k,v){const c=gc(id);if(c){c.data[k]=v;gen();}}
+
+function togOp(id,v,on){
+  const c=gc(id);if(!c)return;
+  if(on){if(!c.data.ops.includes(v))c.data.ops.push(v);}
+  else{c.data.ops=c.data.ops.filter(o=>o!==v);}
+  document.querySelectorAll(`[data-cid="${id}"] .opcb`).forEach(el=>{
+    const s=c.data.ops.includes(el.dataset.op);
+    el.classList.toggle('on',s);el.querySelector('input').checked=s;
+  });
+  document.getElementById('fww').classList.toggle('on',cs.some(c=>c.type==='op'&&c.data.ops.includes('constOpFileWrite')));
+  gen();
+}
+
+function addTag(id,inp,slot){
+  const v=inp.value.trim();if(!v)return;
+  const c=gc(id);if(!c)return;
+  if(!c.data.vals)c.data.vals=[];
+  if(!c.data.vals.includes(v)){c.data.vals.push(v);rTags(id,slot);gen();}
+  inp.value='';
+}
+function rmTag(id,v,slot){
+  const c=gc(id);if(!c)return;
+  c.data.vals=c.data.vals.filter(x=>x!==v);rTags(id,slot);gen();
+}
+function rTags(id,slot){
+  const w=document.getElementById('tw-'+id);if(!w)return;
+  const c=gc(id),inp=w.querySelector('.taginp');
+  w.querySelectorAll('.tag').forEach(t=>t.remove());
+  (c.data.vals||[]).forEach(v=>{
+    const t=document.createElement('span');t.className='tag';
+    t.innerHTML=`${ex(v)}<span class="tagx" onclick="rmTag(${id},'${v}','${slot}')">×</span>`;
+    w.insertBefore(t,inp);
+  });
+}
+
+// ═══════════ RENDER ═══════════
+
+function renderCs(){
+  const list=document.getElementById('clist');
+  if(!cs.length){list.innerHTML='<div class="empty">Add conditions below, or load a preset from the left.</div>';return;}
+  list.innerHTML='';
+  cs.forEach((c,i)=>{
+    if(i>0){const s=document.createElement('div');s.className='lsep';s.textContent=logic.toUpperCase();list.appendChild(s);}
+    list.appendChild(buildCard(c));
+  });
+  document.getElementById('fww').classList.toggle('on',cs.some(c=>c.type==='op'&&c.data.ops.includes('constOpFileWrite')));
+}
+
+const TLBL={op:'Operation',drive:'Drive Type',proc:'Process',file:'File Property',time:'Time',agent:'Agent'};
+
+function buildCard(c){
+  const card=document.createElement('div');
+  card.className=`ccard t-${c.type}`;card.dataset.cid=c.id;
+  card.innerHTML=`<div class="chdr"><span class="cbadge">${TLBL[c.type]}</span><button class="brm" onclick="removeC(${c.id})">×</button></div><div id="cb-${c.id}"></div>`;
+  ({op:rOp,drive:rDrive,proc:rProc,file:rFile,time:rTime,agent:rAgent})[c.type](c,card.querySelector('#cb-'+c.id));
+  return card;
+}
+
+function rOp(c,b){
+  b.innerHTML=`<div class="hint" style="margin-bottom:4px;">Select one or more operations</div><div class="ops-grid">${OPS.map(o=>`<label class="opcb ${c.data.ops.includes(o.v)?'on':''}" data-op="${o.v}"><input type="checkbox" ${c.data.ops.includes(o.v)?'checked':''} onchange="togOp(${c.id},'${o.v}',this.checked)"><span><span class="opname">${o.v}</span><br><span class="opdesc">${o.d}</span></span></label>`).join('')}</div>`;
+}
+
+function rDrive(c,b){
+  b.innerHTML=`<div style="display:flex;flex-direction:column;gap:4px;">
+    <div class="cfl"><label>Drive Property</label><select onchange="up(${c.id},'prop',this.value)">
+      <option value="evtDestDriveType" ${c.data.prop==='evtDestDriveType'?'selected':''}>evtDestDriveType (most ops)</option>
+      <option value="evtSrcDriveType"  ${c.data.prop==='evtSrcDriveType'?'selected':''}>evtSrcDriveType (FileWrite only)</option>
+    </select></div>
+    <div class="cfl"><label>Drive Constant</label><select onchange="up(${c.id},'dc',this.value)">${DRIVES.map(d=>`<option value="${d.v}" ${c.data.dc===d.v?'selected':''}>${d.v} — ${d.d}</option>`).join('')}</select></div>
+    <label style="display:flex;align-items:center;gap:5px;font-size:10px;cursor:pointer;color:var(--text);font-family:'Inter',sans-serif;">
+      <input type="checkbox" ${c.data.bus?'checked':''} onchange="up(${c.id},'bus',this.checked);renderCs();" style="accent-color:var(--accent)">Filter by Bus Type
+    </label>
+    ${c.data.bus?`<div class="cfl"><label>Bus Constant</label><select onchange="up(${c.id},'bc',this.value)">${BUSES.map(b=>`<option value="${b.v}" ${c.data.bc===b.v?'selected':''}>${b.v} — ${b.d}</option>`).join('')}</select></div>`:''}
+  </div><div class="hint">FileWrite has no destination path — must use evtSrcDriveType.</div>`;
+}
+
+function rProc(c,b){
+  b.innerHTML=`<div style="display:flex;flex-direction:column;gap:4px;">
+    <div class="cfl"><label>Property</label><select onchange="up(${c.id},'prop',this.value)">${PROCS.map(p=>`<option value="${p.v}" ${c.data.prop===p.v?'selected':''}>${p.v}</option>`).join('')}</select></div>
+    <div class="cfl"><label>Operator</label><select onchange="up(${c.id},'op',this.value)">${SOPS.map(o=>`<option value="${o}" ${c.data.op===o?'selected':''}>${o}</option>`).join('')}</select></div>
+    <div class="cfl"><label>Values (Enter to add)</label>
+      <div class="tagwrap" id="tw-${c.id}">${(c.data.vals||[]).map(v=>`<span class="tag">${v}<span class="tagx" onclick="rmTag(${c.id},'${v}','proc')">×</span></span>`).join('')}<input class="taginp" placeholder="e.g. nero.exe" onkeydown="if(event.key==='Enter'){addTag(${c.id},this,'proc');event.preventDefault()}" onblur="addTag(${c.id},this,'proc')"/></div>
+    </div>
+  </div>`;
+}
+
+function rFile(c,b){
+  const isBool=FILE_P.find(p=>p.v===c.data.prop)?.b;
+  b.innerHTML=`<div style="display:flex;flex-direction:column;gap:4px;">
+    <div class="cfl"><label>Property</label><select onchange="up(${c.id},'prop',this.value);renderCs();">${FILE_P.map(p=>`<option value="${p.v}" ${c.data.prop===p.v?'selected':''}>${p.v}</option>`).join('')}</select></div>
+    ${isBool?`<div class="cfl"><label>Value</label><select onchange="up(${c.id},'bv',this.value)"><option value="true" ${c.data.bv==='true'?'selected':''}>true</option><option value="false" ${c.data.bv==='false'?'selected':''}>false</option></select></div>`:`
+    <div class="cfl"><label>Operator</label><select onchange="up(${c.id},'op',this.value)">${SOPS.map(o=>`<option value="${o}" ${c.data.op===o?'selected':''}>${o}</option>`).join('')}</select></div>
+    <div class="cfl"><label>Values (Enter to add)</label>
+      <div class="tagwrap" id="tw-${c.id}">${(c.data.vals||[]).map(v=>`<span class="tag">${v}<span class="tagx" onclick="rmTag(${c.id},'${v}','file')">×</span></span>`).join('')}<input class="taginp" placeholder="e.g. docx" onkeydown="if(event.key==='Enter'){addTag(${c.id},this,'file');event.preventDefault()}" onblur="addTag(${c.id},this,'file')"/></div>
+      <div class="hint">No leading dot — use docx not .docx</div>
+    </div>`}
+  </div>`;
+}
+
+function rTime(c,b){
+  b.innerHTML=`<div style="display:flex;gap:5px;">
+    <div class="cfl" style="flex:1"><label>Operator</label><select onchange="up(${c.id},'op',this.value)"><option value="lessThan" ${c.data.op==='lessThan'?'selected':''}>Before (lessThan)</option><option value="greaterThan" ${c.data.op==='greaterThan'?'selected':''}>After (greaterThan)</option></select></div>
+    <div class="cfl" style="flex:1"><label>Time</label><input type="time" value="${c.data.tv||'17:00'}" onchange="up(${c.id},'tv',this.value)"/></div>
+  </div><div class="hint">Uses agentCurrentTime — resets daily. Use agentCurrentDateTime for date+time.</div>`;
+}
+
+function rAgent(c,b){
+  const isBool=AGENTS.find(p=>p.v===c.data.prop)?.b;
+  b.innerHTML=`<div style="display:flex;flex-direction:column;gap:4px;">
+    <div class="cfl"><label>Property</label><select onchange="up(${c.id},'prop',this.value);renderCs();">${AGENTS.map(p=>`<option value="${p.v}" ${c.data.prop===p.v?'selected':''}>${p.v} — ${p.d}</option>`).join('')}</select></div>
+    ${isBool?`<div class="cfl"><label>Value</label><select onchange="up(${c.id},'bv',this.value)"><option value="true" ${c.data.bv==='true'?'selected':''}>true</option><option value="false" ${c.data.bv==='false'?'selected':''}>false</option></select></div>`:''}
+  </div>`;
+}
+
+// ═══════════ XML GENERATION ═══════════
+
+function gen(){
+  const name=document.getElementById('r-name').value||'Unnamed-Rule';
+  const type=document.getElementById('r-type').value;
+  const alert=document.getElementById('r-alert').value;
+  const sev=document.getElementById('r-sev').value;
+  const status=document.getElementById('r-status').value;
+  const cont=document.getElementById('r-cont').value;
+  const post=document.getElementById('r-post').value;
+
+  const hasWrite=cs.some(c=>c.type==='op'&&c.data.ops.includes('constOpFileWrite'));
+  const blks=buildCondXML();
+
+  let body;
+  if(hasWrite&&blks.main&&blks.write){
+    body=splitBody(blks,logic);
+  } else if(blks.main){
+    body=`<${logic}>\n${blks.main}</${logic}>`;
+  } else {
+    body=`<!-- Add conditions to generate rule body -->`;
+  }
+
+  const xml=[
+    `<?xml version="1.0"?>`,`<!--`,
+    `  Rule Name:     ${name}`,
+    `  Rule Type:     ${type} Rule`,
+    `  Primary Action:${primary}`,
+    `  Send Alert:    ${alert}`,
+    `  Severity:      ${sev}`,
+    `  Status:        ${status}`,
+    `  Continue Eval: ${cont}`,
+    `  Run After Op:  ${post}`,
+    `-->`,body
+  ].join('\n');
+
+  document.getElementById('xmlout').innerHTML=hl(xml);
+}
+
+function buildCondXML(){
+  if(!cs.length)return{main:'',write:''};
+  const opC=cs.filter(c=>c.type==='op'),nonOp=cs.filter(c=>c.type!=='op');
+  const driveC=nonOp.filter(c=>c.type==='drive'),otherC=nonOp.filter(c=>c.type!=='drive');
+  let allOps=[];opC.forEach(c=>{allOps=allOps.concat(c.data.ops);});
+  const nOps=allOps.filter(o=>o!=='constOpFileWrite'),wOps=allOps.filter(o=>o==='constOpFileWrite');
+  const oXML=otherC.map(xOther).join(''),dXML=xDrive(driveC,false),wdXML=xDrive(driveC,true);
+  let main='';
+  if(nOps.length||(otherC.length||driveC.length)){main+=oXML;if(nOps.length)main+=xOps(nOps);main+=dXML;}
+  let write='';
+  if(wOps.length){write+=xOps(['constOpFileWrite']);write+=wdXML;}
+  return{main,write};
+}
+
+function xOps(ops){
+  if(!ops||!ops.length)return'';
+  if(ops.length===1)return`  <equal>\n    <evtOperationType/>\n    <${ops[0]}/>\n  </equal>\n`;
+  return`  <in>\n    <evtOperationType/>\n    <list>\n`+ops.map(o=>`      <${o}/>\n`).join('')+`    </list>\n  </in>\n`;
+}
+
+function xDrive(dc,fw){
+  return dc.map(c=>{
+    const p=fw?'evtSrcDriveType':c.data.prop;
+    if(c.data.bus){const bp=fw?'evtSrcBusType':'evtDestBusType';return`  <and>\n    <equal>\n      <${p}/>\n      <${c.data.dc}/>\n    </equal>\n    <equal>\n      <${bp}/>\n      <${c.data.bc}/>\n    </equal>\n  </and>\n`;}
+    return`  <equal>\n    <${p}/>\n    <${c.data.dc}/>\n  </equal>\n`;
+  }).join('');
+}
+
+function xOther(c){
+  switch(c.type){case 'proc':return xProc(c);case 'file':return xFile(c);case 'time':return xTime(c);case 'agent':return xAgent(c);default:return'';}
+}
+
+function xProc(c){
+  const{prop,op,vals}=c.data;if(!vals||!vals.length)return`  <!-- Process: add values -->\n`;
+  if(op==='in'||op==='notIn'){let i=`  <in>\n    <${prop}/>\n    <list>\n`+vals.map(v=>`      <string value="${ex(v)}"/>\n`).join('')+`    </list>\n  </in>\n`;return op==='notIn'?`  <not>\n  ${i.replace(/\n/g,'\n  ')}</not>\n`:i;}
+  if(op==='like'||op==='notLike'){let i=`  <like expr="${ex(vals[0])}">\n    <${prop}/>\n  </like>\n`;return op==='notLike'?`  <not>\n  ${i.replace(/\n/g,'\n  ')}</not>\n`:i;}
+  if(op==='regExp')return`  <regExp expr="${ex(vals[0])}">\n    <${prop}/>\n  </regExp>\n`;
+  return`  <${op}>\n    <${prop}/>\n    <string value="${ex(vals[0])}"/>\n  </${op}>\n`;
+}
+
+function xFile(c){
+  const{prop,op,vals,bv}=c.data,fp=FILE_P.find(p=>p.v===prop);
+  if(fp?.b)return`  <equal>\n    <${prop}/>\n    <bool value="${bv}"/>\n  </equal>\n`;
+  if(!vals||!vals.length)return`  <!-- File: add values -->\n`;
+  if(op==='in'||op==='notIn'){let i=`  <in>\n    <${prop}/>\n    <list>\n`+vals.map(v=>`      <string value="${ex(v)}"/>\n`).join('')+`    </list>\n  </in>\n`;return op==='notIn'?`  <not>\n  ${i.replace(/\n/g,'\n  ')}</not>\n`:i;}
+  if(op==='like'||op==='notLike'){let i=`  <like expr="${ex(vals[0])}">\n    <${prop}/>\n  </like>\n`;return op==='notLike'?`  <not>\n  ${i.replace(/\n/g,'\n  ')}</not>\n`:i;}
+  if(op==='regExp')return`  <regExp expr="${ex(vals[0])}">\n    <${prop}/>\n  </regExp>\n`;
+  return`  <${op}>\n    <${prop}/>\n    <string value="${ex(vals[0])}"/>\n  </${op}>\n`;
+}
+
+function xTime(c){
+  const[h,m]=(c.data.tv||'17:00').split(':').map(Number);
+  const ap=h>=12?'PM':'AM',h12=String((h%12)||12).padStart(2,'0');
+  return`  <${c.data.op}>\n    <agentCurrentTime/>\n    <time value="${h12}:${String(m).padStart(2,'0')} ${ap}"/>\n  </${c.data.op}>\n`;
+}
+
+function xAgent(c){return`  <equal>\n    <${c.data.prop}/>\n    <bool value="${c.data.bv}"/>\n  </equal>\n`;}
+
+function splitBody(blks,lg){
+  let o=`<or>\n\n  <!-- Branch 1: All operations except FileWrite — uses evtDestDriveType -->\n  <${lg}>\n`;
+  blks.main.split('\n').forEach(l=>{o+=l?`    ${l}\n`:'\n';});
+  o+=`  </${lg}>\n\n  <!-- Branch 2: FileWrite only — uses evtSrcDriveType (no destination path exists) -->\n  <and>\n`;
+  blks.write.split('\n').forEach(l=>{o+=l?`    ${l}\n`:'\n';});
+  return o+`  </and>\n\n</or>`;
+}
+
+// ═══════════ HIGHLIGHT ═══════════
+
+function hl(xml){
+  return xml
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/(&lt;!--[\s\S]*?--&gt;)/g,'<span class="xc">$1</span>')
+    .replace(/(&lt;\/)([\w]+)(&gt;)/g,'<span class="xt">$1$2$3</span>')
+    .replace(/(&lt;)(const\w+)(\/&gt;)/g,'<span class="xt">&lt;</span><span class="xk">$2</span><span class="xt">/&gt;</span>')
+    .replace(/(&lt;)(evt\w+|cur\w+|agent\w+)(\/&gt;)/g,'<span class="xt">&lt;</span><span class="xp">$2</span><span class="xt">/&gt;</span>')
+    .replace(/(&lt;)([\w]+)(\s[^&]*)?(&gt;)/g,(m,lt,tag,at,gt)=>{
+      const s=at?at.replace(/([\w]+)(=)(&quot;[^&]*&quot;)/g,'<span class="xa">$1</span>$2<span class="xv">$3</span>'):'';
+      return`<span class="xt">&lt;${tag}</span>${s}<span class="xt">${gt}</span>`;
+    })
+    .replace(/(&lt;)([\w]+)(\/&gt;)/g,'<span class="xt">$1$2$3</span>');
+}
+
+function ex(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function getRaw(){return document.getElementById('xmlout').innerText;}
+
+function copyXML(){
+  navigator.clipboard.writeText(getRaw()).then(()=>{
+    const t=document.getElementById('toast');t.classList.add('on');
+    setTimeout(()=>t.classList.remove('on'),1800);
+  });
+}
+
+function dlXML(){
+  const n=(document.getElementById('r-name').value||'dg-rule').replace(/\s+/g,'-');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([getRaw()],{type:'application/xml'}));
+  a.download=n+'.xml';a.click();
+}
+
+function resetAll(){
+  cs=[];cc=0;logic='and';primary='Continue';
+  document.getElementById('r-name').value='';
+  ['r-type','r-alert','r-sev','r-status','r-cont','r-post'].forEach(id=>{document.getElementById(id).selectedIndex=0;});
+  setPrimary('Continue');setLogic('and');renderCs();gen();
+}
+
+// ═══════════ HELP MODAL ═══════════
+
+const TABS={
+overview:`
+<div class="callout"><b>Bottom-up evaluation:</b> DG evaluates rule conditions from the bottom of the XML to the top. Place the most restrictive (cheapest) condition last in the XML — the engine exits early on non-matches, saving overhead on every event.</div>
+<div class="hsec"><h3>Rule Types</h3><table class="htbl"><tr><th>Type</th><th>Purpose</th></tr>
+<tr><td>Control</td><td>Monitor, block, prompt, or encrypt user activity. The most common rule type for DLP enforcement.<small>Examples: block USB writes, prompt before emailing sensitive files</small></td></tr>
+<tr><td>Classification</td><td>Automatically classify files and data based on content, context, or user input. Tags travel with the file.<small>Examples: tag files containing SSNs, mark IP as Confidential</small></td></tr>
+<tr><td>Filter</td><td>Control which events get reported to the DGMC server. Reduces event noise and storage load.<small>Examples: suppress read events on the C drive, filter out system process activity</small></td></tr>
+<tr><td>Trusted Process</td><td>Whitelist specific processes so they bypass other rules. Use carefully.<small>Examples: allow a backup agent to read all files without triggering alerts</small></td></tr>
+</table></div>
+<div class="hsec"><h3>Rule Settings</h3><table class="htbl"><tr><th>Setting</th><th>What it does</th></tr>
+<tr><td>Send Alert</td><td><b>Alert &amp; Event</b> — creates a visible alert in DGMC and stores event details. <b>Events Only</b> — no alert, but event is recorded. <b>None</b> — completely silent.</td></tr>
+<tr><td>Status</td><td>Start rules as <b>Inactive</b> during testing. The rule exists in policies but agents ignore it until you set it Active.</td></tr>
+<tr><td>Continue Eval</td><td>When <b>No</b> (default), the engine stops after this rule fires. Set to <b>Yes</b> when multiple rules should fire on the same event.</td></tr>
+<tr><td>Run After Operation</td><td>Set to <b>Yes</b> when using file capture functions — the file must exist before it can be captured.</td></tr>
+</table></div>
+<div class="hsec"><h3>Logic Operators</h3><table class="htbl"><tr><th>Operator</th><th>Meaning</th></tr>
+<tr><td>&lt;and&gt;</td><td>All conditions inside must be true for the rule to fire</td></tr>
+<tr><td>&lt;or&gt;</td><td>Any one condition being true is enough to fire the rule</td></tr>
+<tr><td>&lt;not&gt;</td><td>Inverts the block — fires when the enclosed conditions are NOT met. Used for whitelisting.</td></tr>
+</table></div>`,
+
+actions:`
+<div class="callout"><b>One primary action per rule.</b> The action is a single selection set in the DGMC rule header. It determines what happens when all conditions evaluate to true.</div>
+<div class="hsec"><h3>Primary Actions</h3><table class="htbl"><tr><th>Action</th><th>What happens when the rule fires</th></tr>
+<tr><td><span class="pill p-green">Continue</span></td><td>The operation is <b>allowed</b> and proceeds. An alert and/or event record is generated. Use for monitoring without disrupting users.<small>Best for: audit rules, data discovery, building baselines before enforcing</small></td></tr>
+<tr><td><span class="pill p-red">Block</span></td><td>The operation is <b>hard stopped</b>. No prompt shown — Windows may show a generic access denied message.<small>Best for: high-confidence rules where the action should never be allowed</small></td></tr>
+<tr><td><span class="pill p-orange">Prompt</span></td><td>The agent shows a <b>dialog to the user</b>. Depending on prompt config, user may continue with justification or be blocked regardless.<small>Best for: medium-risk scenarios where business context matters</small></td></tr>
+<tr><td><span class="pill p-blue">Encrypt</span></td><td>The file is <b>automatically encrypted</b>. Method (AES256-adaptive, password-protected, S/MIME) is set in the rule. Adaptive encryption is transparent to the user.<small>Best for: files moving to removable drives, cloud, or email where you want protection without blocking</small></td></tr>
+<tr><td><span class="pill p-purple">Vault</span></td><td>The operation is allowed but the current process is flagged as <b>data vaulted</b>. Additional vault rules then activate for that session.<small>Best for: triggering additional restrictions only after a sensitive action is detected</small></td></tr>
+<tr><td><span class="pill p-cyan">Label</span></td><td>Applies a <b>Microsoft Information Protection (MIP) label</b> to files moving to a sensitive destination. Requires MIP configured.<small>Best for: extending DLP classification into the Microsoft 365 / Purview ecosystem</small></td></tr>
+</table></div>`,
+
+conditions:`
+<div class="callout"><b>Order matters.</b> Conditions are evaluated bottom-up. Put cheap checks (drive type, operation type) at the bottom of the XML — evaluated first, they quickly eliminate non-matching events before expensive checks like regex run.</div>
+<div class="hsec"><h3>Condition Types</h3><table class="htbl"><tr><th>Type</th><th>What it matches on</th></tr>
+<tr><td><span class="pill p-blue">Operation</span></td><td>The type of event — file copy, CD burn, download, print, etc. Nearly every rule needs at least one.<small>Tip: use &lt;in&gt; with a list to match multiple operations in one condition</small></td></tr>
+<tr><td><span class="pill p-green">Drive Type</span></td><td>The source or destination drive. <b>Critical:</b> FileWrite uses <code>evtSrcDriveType</code>; all other ops use <code>evtDestDriveType</code>. The builder handles this automatically.<small>Add Bus Type to distinguish internal (ATAPI/SATA) from external (USB) drives of the same type</small></td></tr>
+<tr><td><span class="pill p-orange">Process</span></td><td>The application performing the operation. Match by name, path, or MD5. Use <code>notIn</code> for whitelisting authorized apps.<small>Example: only nero.exe and imgburn.exe are allowed to burn CDs</small></td></tr>
+<tr><td><span class="pill p-purple">File Property</span></td><td>Extension, path, size, or classification tags. Use extension lists for broad coverage, paths for location-specific rules.<small>No leading dot — use docx not .docx</small></td></tr>
+<tr><td>Time</td><td>Restrict activity based on time of day. Uses <code>agentCurrentTime</code> which resets at midnight.<small>Example: block CD burns outside 8AM–6PM business hours</small></td></tr>
+<tr><td>Agent</td><td>Machine properties — laptop, virtual session, terminal server. Apply different rules without separate policies.<small>Example: prevent laptops from writing to CD drives when off-network</small></td></tr>
+</table></div>
+<div class="hsec"><h3>constDriveCDRom — Internal vs External Drives</h3>
+<div class="note"><b>Short answer: yes, constDriveCDRom covers both.</b> The guide defines it simply as "The drive is a CD-ROM or DVD drive" — no bus-type qualifier. Drive type is determined by how the OS classifies the media (Windows DRIVE_CDROM, equivalent on Linux/macOS), which is independent of the physical connection. A USB-connected external DVD burner and a SATA internal Blu-ray drive both report as DRIVE_CDROM to the OS, so both match <code>constDriveCDRom</code>.</div>
+<table class="htbl"><tr><th>Drive type constant</th><th>What it matches</th></tr>
+<tr><td>constDriveCDRom</td><td>Any optical drive — internal (ATAPI, SATA) or external (USB, Firewire). Media type is the discriminator, not the bus.</td></tr>
+</table>
+<p style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;">If you need to restrict a rule to <em>only</em> internal or <em>only</em> external optical drives, add a Bus Type filter to the Drive Type condition: <code>constBusATAPI</code> or <code>constBusSata</code> for internal, <code>constBusUSB</code> for external. This is an advanced use case — for most DLP rules covering CD/DVD, <code>constDriveCDRom</code> alone is correct and sufficient.</p>
+</div>`,
+
+ops:`
+<div class="callout"><b>Operation types</b> are the core of most rules. Use <code>&lt;in&gt;</code> with a list to match multiple operations in a single condition block efficiently.</div>
+<div class="hsec"><h3>File Operations</h3><table class="htbl"><tr><th>Constant</th><th>What it captures</th></tr>
+<tr><td>constOpFileCopy</td><td>Copies a file from one location to another</td></tr>
+<tr><td>constOpFileMove</td><td>Moves a file (cut + paste)</td></tr>
+<tr><td>constOpFileSaveAs</td><td>Saves a file with a new name or location via Save As</td></tr>
+<tr><td>constOpFileWrite</td><td>Writes to a file stream. <b>No destination path</b> — use evtSrcDriveType.<small>Covers writes that don't involve an explicit copy or save-as</small></td></tr>
+<tr><td>constOpFileRead</td><td>Reads the file contents (not just opening a handle)</td></tr>
+<tr><td>constOpFileOpen</td><td>Creates a file handle for read/write access. Does not read or write the file itself.</td></tr>
+<tr><td>constOpFileDelete</td><td>Permanently deletes a file — does not go to recycle bin</td></tr>
+<tr><td>constOpFileRecycle</td><td>Sends a file to the Windows recycle bin</td></tr>
+<tr><td>constOpFileRename</td><td>Renames a file or folder</td></tr>
+<tr><td>constOpFileEdit</td><td>Edits and saves a file in place</td></tr>
+<tr><td>constOpFileArchive</td><td>Archives via WinZip, WinRAR (Windows) or tar/mkisofs (Linux)<small>Catches archive-based CD burns on Linux</small></td></tr>
+<tr><td>constOpFileExtract</td><td>Extracts a file from a ZIP, RAR, or other archive</td></tr>
+<tr><td>constOpFileClose</td><td>File close. Requires Run After Operation = Yes.</td></tr>
+</table></div>
+<div class="hsec"><h3>CD / DVD</h3><table class="htbl"><tr><th>Constant</th><th>What it captures</th></tr>
+<tr><td>constOpCDBurn</td><td>Native OS CD/DVD burn or write. Covers Windows Explorer burns, disc authoring software, and OS-level burn commands. Works on Windows, Linux, and macOS.<small>The primary operation for CD/DVD rules. Always include it when writing CD/DVD policies.</small></td></tr>
+</table></div>
+<div class="hsec"><h3>Network &amp; Browser</h3><table class="htbl"><tr><th>Constant</th><th>What it captures</th></tr>
+<tr><td>constOpNetTransferDownload</td><td>File downloaded via HTTP/HTTPS through a DG-supported browser (Web Inspection Proxy)</td></tr>
+<tr><td>constOpNetTransferUpload</td><td>File uploaded via HTTP/HTTPS through a DG-supported browser</td></tr>
+<tr><td>constOpNetwork</td><td>All network operations — connect, accept, listen. Broad; use with specific filters.</td></tr>
+<tr><td>constOpPrint</td><td>File sent to a printer (Windows only)</td></tr>
+</table></div>
+<div class="hsec"><h3>Application Data Exchange (ADE) &amp; Devices</h3><table class="htbl"><tr><th>Constant</th><th>What it captures</th></tr>
+<tr><td>constOpAdePaste</td><td>Content pasted into an application via clipboard</td></tr>
+<tr><td>constOpAdeCut</td><td>Content cut from an application</td></tr>
+<tr><td>constOpAdePrintScreen</td><td>Print Screen key pressed</td></tr>
+<tr><td>constOpAdeScreenCapture</td><td>Screenshot taken programmatically</td></tr>
+<tr><td>constOpDeviceAdded</td><td>A USB device was inserted</td></tr>
+<tr><td>constOpDeviceRemoved</td><td>A USB device was removed</td></tr>
+<tr><td>constOpAppStart</td><td>An application process started<small>Warning: do not mix with file operations in the same rule — keep on separate rules.</small></td></tr>
+</table></div>`,
+
+operators:`
+<div class="callout">Choose the simplest operator that achieves your goal — <code>&lt;in&gt;</code> with a list is more efficient than chaining multiple <code>&lt;equal&gt;</code> conditions.</div>
+<div class="hsec"><h3>Comparison Operators</h3><table class="htbl"><tr><th>Operator</th><th>Usage</th></tr>
+<tr><td>equal</td><td>Exact match. Value must equal the property exactly.<small><code>&lt;equal&gt;&lt;evtSrcFileExt/&gt;&lt;string value="docx"/&gt;&lt;/equal&gt;</code></small></td></tr>
+<tr><td>notEqual</td><td>Fires when the property does NOT equal the value.</td></tr>
+<tr><td>in</td><td>Match against a list of values. Most efficient for multi-value conditions.<small>Most common operator for file extensions, process names, operation types</small></td></tr>
+<tr><td>notIn</td><td>Fires when the property does NOT match any value in the list. The whitelist pattern.</td></tr>
+<tr><td>like</td><td>Wildcard string match using % as wildcard. Case-insensitive on Windows.<small><code>&lt;like expr="C:\\Users\\%"&gt;&lt;evtSrcFilePath/&gt;&lt;/like&gt;</code></small></td></tr>
+<tr><td>notLike</td><td>Fires when the property does NOT match the wildcard pattern.</td></tr>
+<tr><td>regExp</td><td>Regular expression match. Most powerful but most expensive — place at the top of your rule (evaluated last).</td></tr>
+<tr><td>lessThan</td><td>Numeric or time comparison — fires when property is less than the value.</td></tr>
+<tr><td>greaterThan</td><td>Fires when property is greater than the value.</td></tr>
+</table></div>
+<div class="hsec"><h3>The Whitelist Pattern</h3><table class="htbl"><tr><th>Pattern</th><th>Meaning</th></tr>
+<tr><td>&lt;not&gt;&lt;in&gt;...&lt;/in&gt;&lt;/not&gt;</td><td>Fires for everything EXCEPT the listed values. Used to whitelist authorized processes or values.<small>Example: block CD burns from all apps except nero.exe and imgburn.exe</small></td></tr>
+</table>
+<p style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;">The <b>Block Burns — Except Authorized Apps</b> preset uses this pattern automatically. Load it to see the XML it generates.</p>
+</div>`
+};
+
+function openHelp(tab='overview'){
+  switchTab(tab);
+  document.getElementById('mbg').classList.add('on');
+}
+function closeHelp(){document.getElementById('mbg').classList.remove('on');}
+function switchTab(tab){
+  document.querySelectorAll('.mtab').forEach(t=>{t.classList.toggle('on',t.id==='tab-'+tab);});
+  document.getElementById('mbody').innerHTML=TABS[tab]||TABS.overview;
+}
+
+function openPDF(){
+  const a=document.createElement('a');
+  a.href='/mnt/user-data/uploads/Digital_Guardian_9_0_0_Rule_Implementation_Guide.pdf';
+  a.target='_blank';a.click();
+}
+
+// ═══════════ COLUMN RESIZE ═══════════
+
+(function(){
+  const workspace   = document.getElementById('workspace');
+  const colPresets  = document.getElementById('col-presets');
+  const colBuilder  = document.getElementById('col-builder');
+  const colOutput   = document.getElementById('col-output');
+  const div1        = document.getElementById('div-1');
+  const div2        = document.getElementById('div-2');
+
+  function startDrag(e, divider, leftCol) {
+    e.preventDefault();
+    const startX    = e.clientX;
+    const startW    = leftCol.getBoundingClientRect().width;
+    // Pin the output col to a pixel width during drag so flex:1 doesn't fight us
+    const outW      = colOutput.getBoundingClientRect().width;
+    colOutput.style.flex  = 'none';
+    colOutput.style.width = outW + 'px';
+    divider.classList.add('dragging');
+    document.body.style.cursor     = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    function onMove(e) {
+      const dx      = e.clientX - startX;
+      const minLeft = parseInt(leftCol.style.minWidth) || 120;
+      const maxLeft = parseInt(leftCol.style.maxWidth) || 9999;
+      const newW    = Math.max(minLeft, Math.min(maxLeft, startW + dx));
+      const delta   = newW - startW;               // actual change applied
+      const newOut  = Math.max(160, outW - delta);
+      leftCol.style.width   = newW    + 'px';
+      colOutput.style.width = newOut  + 'px';
+    }
+
+    function onUp() {
+      divider.classList.remove('dragging');
+      document.body.style.cursor     = '';
+      document.body.style.userSelect = '';
+      // Restore output to flex:1 so it fills remaining space again
+      colOutput.style.flex  = '1';
+      colOutput.style.width = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup',   onUp);
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',   onUp);
+  }
+
+  div1.addEventListener('mousedown', e => startDrag(e, div1, colPresets));
+  div2.addEventListener('mousedown', e => startDrag(e, div2, colBuilder));
+})();
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeHelp();});
+gen();
+</script>
+</body>
+</html>
