@@ -2,7 +2,9 @@
 
 A standalone, browser-based XML rule generator for **Digital Guardian 9.0**. No server, no install, no dependencies — open the HTML file and start building rules.
 
-<img width="3431" height="1271" alt="image" src="https://github.com/user-attachments/assets/ddeffdc3-e5c3-49f2-a627-75495caf4f82" />
+<img width="3436" height="1277" alt="image" src="https://github.com/user-attachments/assets/81352c75-871d-4874-8357-191efe2aafde" />
+
+<img width="929" height="1159" alt="image" src="https://github.com/user-attachments/assets/bd2723f9-5105-4b8a-8277-b34a7b3dc763" />
 
 
 ---
