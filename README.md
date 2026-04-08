@@ -13,8 +13,6 @@ A standalone, browser-based XML rule generator for **Digital Guardian 9.0**. No 
 
 Writing Digital Guardian control rules by hand requires knowing the correct XML syntax, property names, symbolic constants, and the quirks of how the rule engine evaluates conditions. This tool handles all of that for you. Configure your rule through a point-and-click interface and get valid, ready-to-import XML output in real time.
 
-Built against the **Digital Guardian 9.0 Rule Implementation Guide**.
-
 ---
 
 ## Features
@@ -142,16 +140,10 @@ To allow specific processes or values and block everything else, use `<not><in>.
 
 ## Compatibility
 
-Built and tested against **Digital Guardian 9.0**. Rule XML syntax is consistent with earlier DG versions (7.x, 8.x) for the operations and properties covered here, though some constants and properties may not be available on older agent versions.
+Rule XML syntax is consistent with earlier DG versions (7.x, 8.x) for the operations and properties covered here, though some constants and properties may not be available on older agent versions.
 
 ---
 
 ## Disclaimer
 
-This tool generates rule XML based on the Digital Guardian 9.0 Rule Implementation Guide. Always test rules with **Status: Inactive** and validate behavior in a non-production environment before deploying to production policies. Rule behavior may vary depending on agent version, OS platform, and DGMC configuration.
-
----
-
-## License
-
-Internal use. Not for redistribution.
+Always test rules with **Status: Inactive** and validate behavior in a non-production environment before deploying to production policies. Rule behavior may vary depending on agent version, OS platform, and DGMC configuration.
